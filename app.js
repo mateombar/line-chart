@@ -30,6 +30,16 @@ async function draw() {
       `translate(${dimensions.margins}, ${dimensions.margins})`
     );
 
+  const tooltip = d3.select("#tooltip");
+  const tooltipDot = ctr
+    .append("circle")
+    .attr("r", 5)
+    .attr("fill", "#fc8781")
+    .attr("stroke", "black")
+    .attr("stroke-width", 2)
+    .style("opacity", 0)
+    .style("pointer-events", "none");
+
   // Scales
   const yScale = d3
     .scaleLinear()
@@ -62,7 +72,48 @@ async function draw() {
 
   const xAxis = d3.axisBottom(xScale);
 
-  ctr.append("g").style('transform', `translateY(${dimensions.ctrHeight}px)`).call(xAxis);
+  ctr
+    .append("g")
+    .style("transform", `translateY(${dimensions.ctrHeight}px)`)
+    .call(xAxis);
+
+  // Tooltip
+  ctr
+    .append("rect")
+    .attr("width", dimensions.ctrWidth)
+    .attr("height", dimensions.ctrHeight)
+    .style("opacity", 0)
+    .on("touchmouse mousemove", function (event) {
+      const mousePos = d3.pointer(event, this);
+      const date = xScale.invert(mousePos[0]);
+
+      // Custom Bisector
+      const bisector = d3.bisector(xAccessor).left;
+      const index = bisector(dataset, date);
+      const stock = dataset[index - 1];
+
+      //Update Image
+      tooltipDot
+        .style("opacity", 1)
+        .attr("cx", xScale(xAccessor(stock)))
+        .attr("cy", yScale(yAccessor(stock)))
+        .raise();
+
+      tooltip
+        .style("display", "block")
+        .style("top", yScale(yAccessor(stock)) - 20 + "px")
+        .style("left", xScale(xAccessor(stock)) + "px");
+
+      tooltip.select(".price").text(`$${yAccessor(stock)}`);
+
+      const dateFormatter = d3.timeFormat("%B %-d, %Y");
+      tooltip.select(".date").text(`${dateFormatter(xAccessor(stock))}`);
+    })
+    .on("mouseleave", function (event) {
+      tooltipDot.style("opacity", 0);
+
+      tooltip.style("display", "none");
+    });
 }
 
 draw();
